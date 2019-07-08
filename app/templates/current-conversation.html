@@ -1,0 +1,16 @@
+{% extends "base-conversation.html" %}
+
+{% block form %}
+<form action="{{ url_for('send_message') }}" method="POST">
+    <div class="row">
+        <div class="col">
+            <input class="form-control" type="text" maxlength="500" name="message">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <input class="btn btn-outline-primary my-2" type="submit" value="Send">
+        </div>
+    </div>
+</form>
+{% endblock %}

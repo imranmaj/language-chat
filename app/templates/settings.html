@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        {% include "flashes.html" %}
+
+        <h1 class="display-4">Settings</h1>
+        <form action="{{ url_for('settings') }}" method="POST">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input class="form-control" type="email" name="email" value="{{ current_user.email }}">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input class="form-control" type="password" name="password">
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm password</label>
+                <input class="form-control" type="password" name="confirm_password">
+            </div>
+            <input class="btn btn-outline-primary mb-2" type="submit" value="Update settings">
+        </form>
+        <form action="{{ url_for('delete_account') }}" method="POST">
+            <input class="btn btn-outline-danger mb-2" type="submit" value="Delete Account">
+        </form>
+    </div>
+{% endblock %}

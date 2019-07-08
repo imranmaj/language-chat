@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="display-4">New Conversation</h1>
+
+        <form action="{{ url_for('new_conversation') }}" method="POST">
+            <label for="languageSelect">Select a language</label>
+            <select id="languageSelect" class="form-control" name="language">
+                {% for language in languages %}
+                    <option value="{{ language }}">{{ language }}</option>
+                {% endfor %}
+            </select>
+            <input class="btn btn-outline-primary mt-2" type="submit">
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="display-4">Past Conversations</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Username</th>
+                <th scope="col">Language</th>
+                <th scope="col">Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for conversation in conversations %}
+                <tr>
+                    <td>{{ conversation["username"] }}</td>
+                    <td>{{ conversation["language"] }}</td>
+                    <td>{{ format_datetime(conversation["timestamp"]) }}</td>
+                    <td>
+                        <a class="btn btn-outline-secondary" href="{{ url_for('conversation', conversation_id=conversation['id']) }}">View Conversation</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

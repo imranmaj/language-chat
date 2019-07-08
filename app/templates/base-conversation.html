@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="row">
+        <div class="col">
+            {% for message in messages %}
+                <p><b>{{ message.user.username }} ({{ format_datetime(utc_to_local(message.timestamp)) }}): </b>{{ message.content }}</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% block form %}
+    {% endblock %}
+</div>
+{% endblock %}
