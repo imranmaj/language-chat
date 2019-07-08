@@ -14,7 +14,6 @@ association_table = db.Table(
     db.Column("conversation_id", db.Integer, db.ForeignKey("conversation.id")),
 )
 
-
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
@@ -66,7 +65,6 @@ class Message(db.Model):
 
     timestamp = db.Column(db.DateTime, index=True, default=datetime.datetime.utcnow)
     content = db.Column(db.String(500))
-
 
 @login.user_loader
 def load_user(id):

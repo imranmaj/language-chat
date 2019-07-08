@@ -14,5 +14,5 @@ def other_conversation_member():
     if current_user.active_conversation():
         users = current_user.active_conversation().users
         other_conversation_member = [user for user in users if user.username != current_user.username][0]
-        
+
         return other_conversation_member

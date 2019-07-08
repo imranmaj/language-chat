@@ -115,18 +115,6 @@ def settings():
         flash("Settings updated successfully", "success")
         return render_template("settings.html")
 
-@app.route("/delete-account", methods=["POST"])
-def delete_account():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-
-    db.session.delete(current_user)
-    db.session.commit()
-    
-    flash("Successfully deleted account", "success")
-    return redirect(url_for("index"))
-
 @app.route("/new-conversation", methods=["GET", "POST"])
 def new_conversation():
     if not current_user.is_authenticated:

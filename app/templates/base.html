@@ -30,7 +30,7 @@
                 <ul class="navbar-nav">
                     {% if current_user.is_authenticated and current_user.active_conversation() %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('current_conversation') }}">Current Conversation with {{ other_conversation_member().username }}</a>
+                            <a class="nav-link" href="{{ url_for('current_conversation') }}">Current conversation with {{ other_conversation_member().username }}</a>
                         </li>
                     {% endif %}
                 </ul>
