@@ -127,6 +127,7 @@ def new_conversation():
         # cancel any active conversation
         if current_user.active_conversation():
             current_user.active_conversation().active = False
+            db.session.commit()
 
         language = request.form["language"]
         

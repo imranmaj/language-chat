@@ -11,7 +11,12 @@
                     <option value="{{ language }}">{{ language }}</option>
                 {% endfor %}
             </select>
-            <input class="btn btn-outline-primary mt-2" type="submit">
+            {% if current_user.active_conversation() %}
+                <input class="btn btn-outline-primary mt-2" type="submit" aria-describedby="newConversationNotice">
+                <small id="newConversationNotice" class="form-text text-muted">Warning: starting a new conversation will end your current conversation</small>
+            {% else %}
+                <input class="btn btn-outline-primary mt-2" type="submit">
+            {% endif %}
         </form>
     </div>
 {% endblock %}
