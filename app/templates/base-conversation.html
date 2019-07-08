@@ -5,7 +5,7 @@
     <div class="row">
         <div class="col">
             {% for message in messages %}
-                <p><b>{{ message.user.username }} ({{ format_datetime(utc_to_local(message.timestamp)) }}): </b>{{ message.content }}</p>
+                <p style="word-wrap: break-word;"><b>{{ message.user.username }} ({{ format_datetime(utc_to_local(message.timestamp)) }}): </b>{{ message.content }}</p>
             {% endfor %}
         </div>
     </div>
