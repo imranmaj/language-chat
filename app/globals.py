@@ -1,18 +1,13 @@
 import time
 from datetime import datetime
 from flask_login import current_user
+from .models import User
 
-def utc_to_local(utc_datetime):
+def format_datetime(utc_datetime):
     epoch = time.mktime(utc_datetime.timetuple())
     offset = datetime.fromtimestamp(epoch) - datetime.utcfromtimestamp(epoch)
-    return utc_datetime + offset
+    local_datetime = utc_datetime + offset
+    return local_datetime.strftime("%x %I:%M:%S %p")
 
-def format_datetime(d):
-    return d.strftime("%x %X")
-
-def other_conversation_member():
-    if current_user.active_conversation():
-        users = current_user.active_conversation().users
-        other_conversation_member = [user for user in users if user.username != current_user.username][0]
-
-        return other_conversation_member
+def other_conversation_member(conversation):
+    return conversation.users.filter(User.id != current_user.id).first()

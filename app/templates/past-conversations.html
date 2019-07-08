@@ -9,17 +9,19 @@
             <tr>
                 <th scope="col">Username</th>
                 <th scope="col">Language</th>
-                <th scope="col">Timestamp</th>
+                <th scope="col">Start</th>
+                <th scope="col">End</th>
             </tr>
         </thead>
         <tbody>
             {% for conversation in conversations %}
                 <tr>
-                    <td>{{ conversation["username"] }}</td>
-                    <td>{{ conversation["language"] }}</td>
-                    <td>{{ format_datetime(conversation["timestamp"]) }}</td>
+                    <td>{{ other_conversation_member(conversation).username }}</td>
+                    <td>{{ conversation.language }}</td>
+                    <td>{{ format_datetime(conversation.start_timestamp) }}</td>
+                    <td>{{ format_datetime(conversation.end_timestamp) }}</td>
                     <td>
-                        <a class="btn btn-outline-secondary" href="{{ url_for('conversation', conversation_id=conversation['id']) }}">View Conversation</a>
+                        <a class="btn btn-outline-secondary" href="{{ url_for('conversation', conversation_id=conversation.id) }}">View Conversation</a>
                     </td>
                 </tr>
             {% endfor %}

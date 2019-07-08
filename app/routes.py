@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import request
 from flask import render_template
 from flask import redirect
@@ -96,10 +97,10 @@ def settings():
         confirm_password = request.form["confirm_password"]
 
         error = False
-        if not all ((email, password, confirm_password)):
+        if not all((email, password, confirm_password)):
             flash("You must fill in all fields", "danger")
             error = True
-        if User.query.filter_by(email=email).first() and User.query.filter_by(email=email).first().email != current_user.email:
+        if User.query.filter((User.email == email) & (User.id != current_user.id)).first():
             flash("Email is already taken", "danger")
             error = True
         if password != confirm_password:
@@ -126,13 +127,12 @@ def new_conversation():
     elif request.method == "POST":
         # cancel any active conversation
         if current_user.active_conversation():
-            current_user.active_conversation().active = False
-        current_user.waiting_for_conversation_with_language = "NONE"
+            current_user.active_conversation().deactivate()
 
         language = request.form["language"]
         
         # check if there is anyone else looking for a conversation in the same language
-        other_user = User.query.filter_by(waiting_for_conversation_with_language=language).first()
+        other_user = User.query.filter((User.waiting_for_conversation_with_language == language) & (User.id != current_user.id)).first()
         if other_user:
             # other user is not searching anymore
             other_user.waiting_for_conversation_with_language = "NONE"
@@ -155,18 +155,10 @@ def past_conversations():
         flash("You must be logged in to view this page", "danger")
         return redirect(url_for("index"))
 
-    conversations = reversed(current_user.conversations)
-    displayed_conversations = []
-    for conversation in conversations:
-        if not conversation.active:
-            displayed_conversations.append({
-                "username": other_user(conversation).username,
-                "language": conversation.language,
-                "timestamp": conversation.created_timestamp,
-                "id": conversation.id
-            })
+    # latest at the top
+    conversations = reversed(current_user.conversations.filter(Conversation.active == False).all())
 
-    return render_template("past-conversations.html", conversations=displayed_conversations)
+    return render_template("past-conversations.html", conversations=conversations)
 
 @app.route("/conversation/<conversation_id>")
 def conversation(conversation_id):
@@ -208,8 +200,3 @@ def send_message():
     current_user.active_conversation().messages.append(Message(content=message, user=current_user))
     db.session.commit()
     return redirect(url_for("current_conversation"))
-
-def other_user(conversation):
-    all_users = conversation.users
-    other_user = [user for user in all_users if current_user.username != user.username][0]
-    return other_user
