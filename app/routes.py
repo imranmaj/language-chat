@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import wraps
 from flask import request
 from flask import render_template
 from flask import redirect
@@ -8,14 +9,50 @@ from flask import abort
 from flask_login import current_user
 from flask_login import login_user
 from flask_login import logout_user
+from flask_socketio import emit
+from flask_socketio import join_room
 from . import db
 from . import flask_app as app
+from . import socketio
 from .models import User
 from .models import Conversation
 from .models import Message
 from .models import Languages
+from .globals import format_datetime
+from .globals import other_conversation_member
+
+def set_title(new_title):
+    def decor(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            app.jinja_env.globals.update(title=f"Language chat | {new_title}")
+
+            return func(*args, **kwargs)
+        return wrapped
+    return decor
+
+def require_authentication(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("You must be logged in to view this page", "danger")
+            return redirect(url_for("index"))
+
+        return func(*args, **kwargs)
+    return wrapped
+
+def require_conversation(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        if not current_user.active_conversation():
+            flash("You are not in a conversation", "danger")
+            return redirect(url_for("index"))
+        
+        return func(*args, **kwargs)
+    return wrapped
 
 @app.route("/")
+@set_title("Home")
 def index():
     if current_user.is_authenticated and current_user.waiting_for_conversation_with_language != "NONE":
         flash(f"Looking for conversation in {current_user.waiting_for_conversation_with_language}", "primary")
@@ -23,6 +60,7 @@ def index():
     return render_template("index.html")
 
 @app.route("/login", methods=["GET", "POST"])
+@set_title("Log in")
 def login():
     if request.method == "GET":
         return render_template("login.html")
@@ -40,16 +78,15 @@ def login():
             return render_template("login.html")
 
 @app.route("/logout")
+@set_title("Log out")
+@require_authentication
 def logout():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-
     logout_user()
     flash("Logout successful", "success")
     return redirect(url_for("index"))
 
 @app.route("/signup", methods=["GET", "POST"])
+@set_title("Sign up")
 def signup():
     if request.method == "GET":
         return render_template("signup.html")
@@ -84,11 +121,9 @@ def signup():
         return redirect(url_for("login"))
 
 @app.route("/settings", methods=["GET", "POST"])
+@set_title("Settings")
+@require_authentication
 def settings():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))    
-
     if request.method == "GET":
         return render_template("settings.html")
     elif request.method == "POST":
@@ -117,11 +152,9 @@ def settings():
         return render_template("settings.html")
 
 @app.route("/new-conversation", methods=["GET", "POST"])
+@set_title("New conversation")
+@require_authentication
 def new_conversation():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-
     if request.method == "GET":
         return render_template("new-conversation.html", languages=[language.name for language in Languages if language != Languages.NONE])
     elif request.method == "POST":
@@ -150,22 +183,18 @@ def new_conversation():
             return redirect(url_for("index"))
 
 @app.route("/past-conversations")
+@set_title("Past conversations")
+@require_authentication
 def past_conversations():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-
     # latest at the top
     conversations = reversed(current_user.conversations.filter(Conversation.active == False).all())
 
     return render_template("past-conversations.html", conversations=conversations)
 
 @app.route("/conversation/<conversation_id>")
+@set_title("View past conversation")
+@require_authentication
 def conversation(conversation_id):
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-
     conversation = Conversation.query.filter_by(id=conversation_id).first()
     if not conversation:
         abort(404)
@@ -174,29 +203,65 @@ def conversation(conversation_id):
 
     return render_template("conversation.html", messages=conversation.messages)
 
+LOAD_MESSAGE_COUNT = -100
 @app.route("/conversation/current")
+@set_title("Current conversation")
+@require_authentication
+@require_conversation
 def current_conversation():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-    if not current_user.active_conversation():
-        flash("You are not in a conversation", "danger")
-        return redirect(url_for("index"))
-
     conversation = current_user.active_conversation()
-    return render_template("current-conversation.html", messages=conversation.messages, jump=True)
+    messages = conversation.messages[:]
 
-@app.route("/send-message", methods=["POST"])
-def send_message():
-    if not current_user.is_authenticated:
-        flash("You must be logged in to view this page", "danger")
-        return redirect(url_for("index"))
-    if not current_user.active_conversation():
-        flash("You are not in a conversation", "danger")
-        return redirect(url_for("index"))
+    global next_message
+    next_message = len(messages) + LOAD_MESSAGE_COUNT - 1
 
-    message = request.form["message"]
-    # attach message to conversation
-    current_user.active_conversation().messages.append(Message(content=message, user=current_user))
+    return render_template("current-conversation.html", messages=messages[LOAD_MESSAGE_COUNT:])
+
+@socketio.on("connect")
+@require_authentication
+@require_conversation
+def connect():
+    join_room(get_room())
+
+@socketio.on("load-previous-message")
+@require_authentication
+@require_conversation
+def load_message(data):
+    global next_message
+
+    if next_message >= 0:
+        scroll = data["scroll"]
+        conversation = current_user.active_conversation()
+        message = message_to_dict(conversation.messages[next_message], scroll)
+        
+        emit("receive-previous-message", message)
+        next_message -= 1
+
+@socketio.on("send-message")
+@require_authentication
+@require_conversation
+def send_message(message):
+    message = Message(content=message, user=current_user)
+
+    current_user.active_conversation().messages.append(message)
     db.session.commit()
-    return redirect(url_for("current_conversation"))
+    emit("receive-new-message", message_to_dict(message, scroll=False), room=get_room())
+
+@app.after_request
+def cache_control(response):
+    # no caching
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    return response
+
+def message_to_dict(message, scroll):
+    return {
+        "username": message.user.username,
+        "timestamp": format_datetime(message.timestamp),
+        "content": message.content,
+        "scroll": scroll
+    }
+
+def get_room():
+    # make unique room based on user ids
+    other_user = other_conversation_member(current_user.active_conversation())
+    return f"{min(current_user.id, other_user.id)}-{max(current_user.id, other_user.id)}"
