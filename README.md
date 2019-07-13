@@ -2,6 +2,8 @@
 
 A tool to practice language skills by chatting in different languages
 
-On Heroku, run `heroku addons:add heroku-postgresql:hobby-dev`. This software will run out of the box once postgres is set up.
+Requires python 3.7+.
 
-Locally, run `python launch.py` and navigate to `localhost:5000`
+When deploying to Heroku, run `heroku addons:add heroku-postgresql:hobby-dev` in the Heroku CLI to set up postgres. This software will run out of the box once postgres is set up.
+
+Locally, run `python launch.py` and navigate to `localhost:5000`.
